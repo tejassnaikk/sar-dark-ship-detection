@@ -1,3 +1,6 @@
+# Project data directory (large files, local paths) — anchored to repo root only
+/data/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
@@ -216,3 +219,5 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+._*
+.DS_Store

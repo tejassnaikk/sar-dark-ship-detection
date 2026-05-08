@@ -1,0 +1,10 @@
+ultralytics==8.*
+opencv-python==4.*
+numpy==2.*
+pandas==3.*
+matplotlib==3.*
+lxml==6.*
+shapely==2.*
+jupyterlab==4.*
+huggingface_hub==1.*
+pytest==9.*

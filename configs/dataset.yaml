@@ -1,0 +1,24 @@
+# RSDD-SAR dataset configuration
+# Update rsdd_sar_root to your local extraction path before running any scripts.
+
+rsdd_sar_root: /Volumes/Tejas SSD/datasets/RSDD-SAR
+
+# Sub-directories (relative to rsdd_sar_root) — do not change unless you restructured the dataset.
+annotations_dir: Annotations
+images_dir: JPEGImages
+validation_images_dir: JPEGValidation
+imagesets_dir: ImageSets
+
+# Available splits (files in ImageSets/)
+splits:
+  - train
+  - test
+  - test_inshore
+  - test_offshore
+
+# Image size used for training
+train_imgsz: 512
+
+# Class names (RSDD-SAR is single-class)
+names:
+  0: ship
