@@ -57,8 +57,13 @@ def robndbox_to_polygon(
       - half-long-axis along the direction given by `angle`
       - half-short-axis perpendicular
 
-    Returns corners in order: top-left, top-right, bottom-right, bottom-left
-    (relative to the rotated frame), normalized to [0, 1].
+    Corner ordering (verified against visual sanity check on real RSDD-SAR data):
+      index 0 → top-left  (rotated frame)   │ edges 0→1 and 2→3 are the SHORT edges (w)
+      index 1 → top-right                   │ edges 1→2 and 3→0 are the LONG  edges (h)
+      index 2 → bottom-right                │
+      index 3 → bottom-left                 │ This ordering matches YOLOv11-OBB expectation.
+
+    Returns normalized to [0, 1].
     """
     cx, cy, h, w, angle = _enforce_long_edge(cx, cy, h, w, angle)
 
@@ -185,18 +190,27 @@ def convert_images_split(
     split_file: Path,
     images_dir: Path,
     output_images_dir: Path,
-) -> None:
-    """Symlink (or copy) images listed in split_file into output_images_dir."""
+) -> int:
+    """
+    Copy images listed in split_file into output_images_dir.
+
+    Uses actual file copies (not symlinks) so the output directory can be
+    uploaded to Google Drive or transferred to Colab without broken links.
+    Returns the number of images copied.
+    """
     output_images_dir.mkdir(parents=True, exist_ok=True)
     stem_list = [l.strip() for l in split_file.read_text().splitlines() if l.strip()]
+    copied = 0
     for stem in stem_list:
         for ext in (".jpg", ".png", ".JPG", ".PNG"):
             src = images_dir / f"{stem}{ext}"
             if src.exists():
                 dst = output_images_dir / src.name
                 if not dst.exists():
-                    dst.symlink_to(src.resolve())
+                    shutil.copy2(src, dst)
+                copied += 1
                 break
+    return copied
 
 
 # ---------------------------------------------------------------------------
@@ -206,10 +220,14 @@ def convert_images_split(
 def main() -> None:
     parser = argparse.ArgumentParser(description="Convert RSDD-SAR to YOLO-OBB format.")
     parser.add_argument("--config", default="configs/dataset.yaml", help="Path to dataset.yaml")
+    parser.add_argument(
+        "--input", default=None,
+        help="Override rsdd_sar_root from config (path to RSDD-SAR directory)",
+    )
     parser.add_argument("--output", default="data/rsdd_yolo", help="Output directory")
     parser.add_argument(
         "--copy-images", action="store_true",
-        help="Symlink images into output dir (needed if trainer can't follow paths)"
+        help="Copy images into output dir (required for Drive upload; omit for labels-only)",
     )
     args = parser.parse_args()
 
@@ -217,7 +235,8 @@ def main() -> None:
     with open(config_path) as f:
         cfg = yaml.safe_load(f)
 
-    root = Path(cfg["rsdd_sar_root"])
+    # --input overrides the config's rsdd_sar_root
+    root = Path(args.input) if args.input else Path(cfg["rsdd_sar_root"])
     annotations_dir = root / cfg["annotations_dir"]
     images_dir = root / cfg["images_dir"]
     imagesets_dir = root / cfg["imagesets_dir"]
@@ -239,8 +258,8 @@ def main() -> None:
 
         if args.copy_images:
             out_imgs = output_dir / "images" / split
-            convert_images_split(split_file, images_dir, out_imgs)
-            log.info("%-15s → images symlinked to %s", split, out_imgs)
+            n_imgs = convert_images_split(split_file, images_dir, out_imgs)
+            log.info("%-15s → %d images copied to %s", split, n_imgs, out_imgs)
 
     # Write a YOLO dataset.yaml for the converted data
     yolo_yaml = {
