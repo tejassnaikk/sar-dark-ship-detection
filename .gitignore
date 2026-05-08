@@ -221,3 +221,5 @@ __marimo__/
 .streamlit/secrets.toml
 ._*
 .DS_Store
+Untitled*.ipynb
+.ipynb_checkpoints/
