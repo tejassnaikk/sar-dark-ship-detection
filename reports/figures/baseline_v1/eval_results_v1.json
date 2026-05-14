@@ -1,0 +1,20 @@
+{
+  "test": {
+    "mAP50": 0.9378,
+    "mAP50_95": 0.6403,
+    "precision": 0.933,
+    "recall": 0.8709
+  },
+  "test_inshore": {
+    "mAP50": 0.7625,
+    "mAP50_95": 0.4834,
+    "precision": 0.7601,
+    "recall": 0.6964
+  },
+  "test_offshore": {
+    "mAP50": 0.9711,
+    "mAP50_95": 0.6731,
+    "precision": 0.954,
+    "recall": 0.9311
+  }
+}
