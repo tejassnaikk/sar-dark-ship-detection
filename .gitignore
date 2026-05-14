@@ -223,3 +223,5 @@ __marimo__/
 .DS_Store
 Untitled*.ipynb
 .ipynb_checkpoints/
+models_local/
+*.pt
