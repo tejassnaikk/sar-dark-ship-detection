@@ -59,13 +59,15 @@ Sentinel-1 GRD inference     ◄── AIS broadcast stream
 
 ## Status
 
-**Week 1 — Baseline training on RSDD-SAR**
+**Week 1 — Complete ✅**
 
 - [x] Repo skeleton and environment
-- [ ] Annotation converter (VOC rotated → YOLOv11-OBB polygon)
-- [ ] Baseline `yolo11n-obb` training (Colab Pro)
-- [ ] Rotated mAP evaluation harness
-- [ ] Model card and metrics table
+- [x] Annotation converter (VOC rotated → YOLOv11-OBB polygon)
+- [x] Baseline `yolo11n-obb` training (Colab Pro, T4 GPU)
+- [x] Rotated mAP evaluation harness (Shapely polygon IoU, 14 unit tests)
+- [x] Model card and metrics table
+
+**Week 2 — Starting:** Sentinel-1 GRD download + cross-domain evaluation
 
 ---
 
@@ -92,7 +94,10 @@ rsdd_sar_root: /your/local/path/RSDD-SAR
 ### 3. Convert annotations
 
 ```bash
-python src/data/rsdd_to_yolo.py --config configs/dataset.yaml --output data/rsdd_yolo
+python -m src.data.rsdd_to_yolo \
+    --input /path/to/RSDD-SAR \
+    --output data/rsdd_yolo \
+    --copy-images
 ```
 
 ### 4. Train (Colab)
@@ -102,20 +107,41 @@ Open `notebooks/01_train_baseline.ipynb` in Google Colab Pro. Follow the noteboo
 ### 5. Evaluate
 
 ```bash
-python src/eval/obb_metrics.py --predictions <path> --split test
+python -m src.eval.obb_metrics \
+    --predictions predictions.parquet \
+    --ground-truth ground_truth.parquet \
+    --output reports/metrics_eval.md
 ```
 
 ---
 
 ## Model
 
-Trained weights: [tejassnaikk/rsdd-yolo11n-obb-v1](https://huggingface.co/tejassnaikk/rsdd-yolo11n-obb-v1) *(coming after Week 1 training)*
+**[tejassnaikk/rsdd-yolo11n-obb-v1](https://huggingface.co/tejassnaikk/rsdd-yolo11n-obb-v1)** — YOLOv11n-OBB, 5.5 MB, trained on RSDD-SAR.
+
+```python
+from huggingface_hub import hf_hub_download
+from ultralytics import YOLO
+
+weights = hf_hub_download(repo_id="tejassnaikk/rsdd-yolo11n-obb-v1", filename="best.pt")
+model = YOLO(weights)
+results = model("path/to/sar_image.jpg", imgsz=512)
+```
+
+**[Live demo](https://huggingface.co/spaces/tejassnaikk/sar-dark-ship-demo)** — upload a SAR chip to see rotated box predictions.
 
 ---
 
 ## Results
 
-*(Populated after baseline training — see `reports/metrics.md`)*
+| Split | mAP@0.5 | mAP@0.5:0.95 | Precision | Recall |
+|-------|---------|--------------|-----------|--------|
+| Overall test (in-domain) | **0.938** | 0.640 | 0.933 | 0.871 |
+| Inshore | 0.763 | 0.483 | 0.760 | 0.696 |
+| Offshore | 0.971 | 0.673 | 0.954 | 0.931 |
+
+21-point inshore/offshore gap (0.763 vs 0.971) — model handles open-water ships well,
+struggles with port clutter. See [`reports/metrics.md`](reports/metrics.md) for full commentary.
 
 ---
 
