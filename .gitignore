@@ -1,5 +1,6 @@
-# Project data directory (large files, local paths) — anchored to repo root only
-/data/
+# Project data: ignore everything except ground-truth labels
+/data/*
+!/data/labels
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
