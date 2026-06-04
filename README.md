@@ -4,6 +4,12 @@ Detecting AIS-dark vessels in Sentinel-1 SAR imagery using a rotated-box detecto
 
 ---
 
+## Week 2 Results
+
+**Cross-domain evaluation (2026-06-04):** The RSDD-SAR-trained YOLOv11n-OBB model was evaluated on two hand-labeled Sentinel-1 GRD scenes (1,063 chips, 233 ground-truth ship boxes across 4 AOIs — 2 inshore port crops, 2 offshore open-water). Performance dropped severely from in-domain (mAP@0.5 = 0.938 on RSDD-SAR test) to cross-domain (overall mAP@0.5 = 0.002, mAP@0.25 = 0.137). Two distinct failure modes were diagnosed: (1) offshore box regression systematically under-sizes predictions to ~64% of ground-truth area (model locates 53% of ships at IoU@0.25 but draws tighter boxes than hand-drawn hull labels); (2) inshore predictions fire heavily on port infrastructure (cranes, container yards, quays) that the open-water-only training set contained no examples of as negatives. See [`reports/metrics.md`](reports/metrics.md) for full methodology, ground truth statistics, audit summary, and diagnostics.
+
+---
+
 ## Motivation
 
 "Dark ships" are vessels that disable or spoof their Automatic Identification System (AIS) transponder — a tactic used to hide illegal fishing, sanctions violations, or ship-to-ship cargo transfers. Commercial SAR satellites (Sentinel-1, ICEYE, Capella) image the ocean regardless of AIS status, making them a powerful independent sensing layer.
@@ -59,7 +65,7 @@ Sentinel-1 GRD inference     ◄── AIS broadcast stream
 
 ## Status
 
-**Week 1 — Complete ✅**
+**Week 1 — Complete ✅** · [`reports/metrics.md §Baseline`](reports/metrics.md)
 
 - [x] Repo skeleton and environment
 - [x] Annotation converter (VOC rotated → YOLOv11-OBB polygon)
@@ -67,7 +73,15 @@ Sentinel-1 GRD inference     ◄── AIS broadcast stream
 - [x] Rotated mAP evaluation harness (Shapely polygon IoU, 14 unit tests)
 - [x] Model card and metrics table
 
-**Week 2 — Starting:** Sentinel-1 GRD download + cross-domain evaluation
+**Week 2 — Complete ✅** · [`reports/metrics.md §Week2`](reports/metrics.md) · [`docs/labeling_protocol.md`](docs/labeling_protocol.md)
+
+- [x] Two Sentinel-1 GRD scenes acquired and preprocessed (Rotterdam + Outer Thames)
+- [x] 1,063 chips hand-labeled across 4 AOIs (233 ship boxes, 888 confirmed empty)
+- [x] Cross-domain inference with best.pt (1,513 predictions)
+- [x] Two-failure-mode diagnostic: offshore box regression undersizing + inshore infrastructure misfiring
+- [x] Full evaluation report with audit summary and Week 3 remediation plan
+
+**Week 3 — Planned:** Fine-tune box regression on Sentinel-1 labeled set; add port-infrastructure hard negatives
 
 ---
 
