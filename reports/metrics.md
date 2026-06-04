@@ -78,10 +78,10 @@ missing file = unreviewed, excluded from evaluation).
 
 | AOI | Chips with ships | Confirmed empty | Total chips | Ship boxes |
 |-----|-----------------|-----------------|-------------|------------|
-| maasvlakte | 35 | 55 | 90 | — |
-| ijmuiden | 24 | 57 | 81 | — |
-| ots_aoi_a | 73 | 387 | 460 | — |
-| ots_aoi_b | 43 | 389 | 432 | — |
+| maasvlakte | 35 | 55 | 90 | 57 |
+| ijmuiden | 24 | 57 | 81 | 46 |
+| ots_aoi_a | 73 | 387 | 460 | 82 |
+| ots_aoi_b | 43 | 389 | 432 | 48 |
 | **Total** | **175** | **888** | **1,063** | **233** |
 
 Chip-level counts refer to chips containing at least one OBB label. Total ship boxes (233)
@@ -102,6 +102,14 @@ ots_aoi_b was re-labeled as a ship during spot-check (ots_aoi_b_r06494_c15729: e
 labeled).
 
 Total known corrections: 3 out of 1,063 chips (~0.3%).
+
+**Spot-check audit summary:** Across approximately 80 audited confirmed-empty chips (20
+per AOI), 2 were flipped to labeled: `ijmuiden_r01527_c09883` and
+`ots_aoi_b_r06494_c15729`. This gives an audit hit rate of ~2.5% on the audited subset —
+meaning roughly 1 in 40 confirmed-empty chips reviewed a second time turned out to contain
+a ship. Extrapolated naively to the full 888 confirmed-empty population, this implies
+~22 missed ships could remain in the dataset, though the audited chips were randomly
+selected and the true undetected error rate is unknown.
 
 **Limitation:** `label_chips.py` overwrites the session JSON on each save, recording only
 final state. Per-decision audit trail (intermediate flips, time spent per chip) was not
@@ -233,32 +241,51 @@ composition.
 
 ### 6. Limitations
 
-1. **Single annotator.** All 1,063 chips were labeled by one person. Inter-annotator
-   agreement was not measured. The ~0.3% known correction rate is a lower bound; unaudited
-   corner cases (borderline berthed ships, small offshore blobs) are unquantified.
+1. **Single annotator, no inter-annotator agreement.** All 1,063 chips were labeled by
+   one person; confidence intervals on GT quality cannot be computed. The 2.5% spot-check
+   hit rate shows errors exist but does not bound the error rate on chips outside the
+   audited subset. This is most consequential for the offshore AOIs, where ships are small
+   (median GT area 536 px², roughly 23×23 px equivalent) and morphologically ambiguous at
+   native ~10 m/px resolution. A systematic annotator bias in one category (e.g.,
+   consistently missing low-contrast offshore vessels) would directly suppress recall in
+   the evaluation without any detectable signal in the stored session data.
 
-2. **Audit trail not preserved.** `label_chips.py` records only the final chip state
-   in the session JSON. Per-decision history (how many times a chip was deferred, whether
-   it was initially labeled differently) is not available. The structured re-review pass
-   on maasvlakte is the only session with a formal audit record.
+2. **Audit trail not preserved.** `label_chips.py` records only the final chip state in
+   the session JSON; per-decision history is not stored. If a systematic labeling bias
+   exists in the three AOIs without a re-review pass (ijmuiden, ots_aoi_a, ots_aoi_b) —
+   for example, consistently boxing a particular type of port clutter as a ship — there
+   is no mechanism to detect or correct it post hoc. The structured re-review pass on
+   maasvlakte (29 confirmed, 2 deleted) is the only session with a verifiable audit
+   record; the other AOIs have only the spot-check evidence.
 
 3. **Single offshore acquisition.** Both ots_aoi_a and ots_aoi_b are crops from the same
    Outer Thames overpass (2026-05-17, Beaufort 3, ascending pass). Scene-to-scene
-   variability in wind state, sea state, and incidence geometry is not sampled. The
-   offshore mAP numbers characterise one acquisition, not the offshore domain.
+   variability in wind state, sea state, and incidence geometry is not sampled. A Bft 4–5
+   acquisition of the same AOIs would produce substantially different ocean clutter
+   statistics and likely different mAP numbers; Beaufort 3 is near-optimal for dark-ship
+   detection and may overstate model performance relative to operationally typical conditions.
 
-4. **Two crops, one swath.** The two offshore AOIs share incidence angle, overpass time,
-   and sensor configuration. They provide spatial diversity within one swath but not
-   across the distribution of viewing conditions the model will encounter operationally.
+4. **Two crops, one swath — offshore results are not independent.** ots_aoi_a and ots_aoi_b
+   share incidence angle, overpass time, orbital pass, and sea state. Any systematic bias
+   from those shared acquisition parameters (e.g., a particular sidelobe geometry, or a
+   sea-state-dependent clutter floor) affects both AOIs identically. Reported differences
+   between the two offshore AOIs are therefore not statistically independent observations
+   and should not be interpreted as evidence of spatial generalisation.
 
-5. **Small GT sample for offshore mAP.** 130 offshore GT boxes. At this N, a handful of
-   annotation decisions (one missed cluster of ships, one incorrectly included blob) can
-   shift mAP by several points. Results should be read as indicative, not precise.
+5. **Small GT sample makes offshore mAP sensitive to individual decisions.** 130 offshore
+   GT boxes. A single mislabeled or missed multi-ship chip (10–15 boxes) would shift
+   offshore mAP@0.25 by roughly 8–12 percentage points. The offshore numbers should be
+   read as order-of-magnitude estimates, not precise benchmarks. Doubling the labeled
+   offshore sample is the minimum credible step before drawing firm conclusions about
+   offshore performance.
 
-6. **Wind-farm proximity.** ots_aoi_b is 24 km from the Gemini wind farm eastern boundary.
-   Pre-labeling density screening found no turbine signatures in the chip queue, but faint
-   azimuth-ambiguity sidelobe leakage from turbines at that separation cannot be fully
-   ruled out.
+6. **Wind-farm proximity may inflate ots_aoi_b false positives.** ots_aoi_b is 24 km from
+   the Gemini wind farm eastern boundary. Pre-labeling density screening found no turbine
+   signatures in the chip queue, but azimuth-ambiguity sidelobe energy from strong turbine
+   scatterers can appear 10–30 km from the physical structure in Sentinel-1 GRD imagery.
+   If faint sidelobe leakage is present in ots_aoi_b, it would appear as spurious bright
+   targets and increase the model's false-positive count specifically in that AOI, making
+   ots_aoi_b predictions appear worse than the model's true open-ocean performance.
 
 7. **mAP@0.50 conflates two failure modes.** For predictions that correctly localise a
    target but undersize the box (the offshore case), mAP@0.50 reports near-zero regardless
